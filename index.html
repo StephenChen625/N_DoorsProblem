@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多门问题模拟器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        .door {
+            display: inline-block;
+            width: 100px;
+            height: 200px;
+            margin: 5px;
+            background-color: #f0f0f0;
+            border: 2px solid #000;
+            line-height: 200px;
+            font-size: 24px;
+            cursor: pointer;
+            position: relative;
+        }
+        .selected {
+            border: 4px solid red;
+        }
+        .door img {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: auto;
+            display: none;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: none;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        .btn {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>多门问题模拟器</h1>
+    <p>输入门的数量，并选择一个门，看看你能不能赢得汽车！</p>
+    <input type="number" id="numDoors" min="3" value="3" />
+    <button class="btn" onclick="generateDoors()">生成门</button>
+    <div id="doors"></div>
+    <div class="result" id="result"></div>
+    <div class="button-container">
+        <button class="btn" onclick="resetGame()">再玩一次</button>
+        <button class="btn" onclick="toggleOverlay()">透视</button>
+    </div>
+
+    <script>
+        let carDoor, chosenDoor, revealedDoors, switched;
+        let overlayVisible = false;
+
+        function generateDoors() {
+            const numDoors = document.getElementById('numDoors').value;
+            const doorsContainer = document.getElementById('doors');
+            doorsContainer.innerHTML = '';
+            for (let i = 1; i <= numDoors; i++) {
+                const door = document.createElement('div');
+                door.className = 'door';
+                door.id = `door${i}`;
+                door.innerHTML = `门 ${i} <img id="img${i}" src="goat.png" alt="山羊"><div class="overlay" id="overlay${i}"></div>`;
+                door.onclick = () => chooseDoor(i);
+                doorsContainer.appendChild(door);
+            }
+            initGame(numDoors);
+        }
+
+        function initGame(numDoors) {
+            // 随机选择一个门放置汽车，另外的门放置山羊
+            carDoor = Math.floor(Math.random() * numDoors) + 1;
+            document.querySelectorAll('.door img').forEach((img, index) => {
+                img.src = index + 1 === carDoor ? 'car.png' : 'goat.png';
+            });
+            chosenDoor = null;
+            revealedDoors = [];
+            switched = false;
+            overlayVisible = false;
+            document.querySelectorAll('.door img').forEach(img => img.style.display = 'none');
+            document.querySelectorAll('.door').forEach(door => door.classList.remove('selected'));
+            document.querySelectorAll('.overlay').forEach(overlay => overlay.style.display = 'none');
+            document.getElementById('result').innerHTML = '';
+        }
+
+        function chooseDoor(door) {
+            if (chosenDoor === null) {
+                chosenDoor = door;
+                document.getElementById(`door${door}`).classList.add('selected');
+                revealGoats(door);
+                document.getElementById('result').innerHTML = `
+                    你选择了门 ${door}。
+                    <br><button class="btn" onclick="switchDoor()">换门</button>
+                    <button class="btn" onclick="stay()">不换</button>
+                `;
+            }
+        }
+
+        function revealGoats(chosenDoor) {
+            const numDoors = document.getElementById('numDoors').value;
+            let count = 0;
+            for (let i = 1; i <= numDoors; i++) {
+                if (i !== chosenDoor && i !== carDoor && count < numDoors - 2) {
+                    document.getElementById(`img${i}`).style.display = 'block';
+                    document.getElementById(`overlay${i}`).style.display = 'none';
+                    revealedDoors.push(i);
+                    count++;
+                }
+            }
+        }
+
+        function switchDoor() {
+            const numDoors = document.getElementById('numDoors').value;
+            switched = true;
+            let newChoice;
+            for (let i = 1; i <= numDoors; i++) {
+                if (i !== chosenDoor && !revealedDoors.includes(i)) {
+                    newChoice = i;
+                    break;
+                }
+            }
+            document.getElementById(`door${chosenDoor}`).classList.remove('selected');
+            document.getElementById(`door${newChoice}`).classList.add('selected');
+            document.getElementById('result').innerHTML = `
+                你从门 ${chosenDoor} 换到了门 ${newChoice}。
+                <br><button class="btn" onclick="revealResult()">揭示结果</button>
+            `;
+            chosenDoor = newChoice;
+        }
+
+        function stay() {
+            document.getElementById('result').innerHTML = `
+                你坚持选择门 ${chosenDoor}。
+                <br><button class="btn" onclick="revealResult()">揭示结果</button>
+            `;
+        }
+
+        function revealResult() {
+            document.getElementById(`img${chosenDoor}`).style.display = 'block';
+            document.getElementById(`overlay${chosenDoor}`).style.display = 'none';
+            document.getElementById(`img${carDoor}`).style.display = 'block';
+            document.getElementById(`overlay${carDoor}`).style.display = 'none';
+            if (chosenDoor === carDoor) {
+                document.getElementById('result').innerHTML = `恭喜你！你赢得了汽车！汽车在门 ${carDoor} 后面。`;
+            } else {
+                document.getElementById('result').innerHTML = `很遗憾，你得到了一只山羊。汽车在门 ${carDoor} 后面。`;
+            }
+        }
+
+        function resetGame() {
+            const numDoors = document.getElementById('numDoors').value;
+            generateDoors(numDoors);
+        }
+
+        function toggleOverlay() {
+            overlayVisible = !overlayVisible;
+            document.querySelectorAll('.overlay').forEach((overlay, index) => {
+                if (!revealedDoors.includes(index + 1)) {
+                    overlay.style.display = overlayVisible ? 'block' : 'none';
+                }
+            });
+            document.querySelectorAll('.door img').forEach((img, index) => {
+                if (!revealedDoors.includes(index + 1)) {
+                    img.style.display = overlayVisible ? 'block' : 'none';
+                }
+            });
+        }
+
+        // 初始生成3个门
+        generateDoors();
+    </script>
+</body>
+</html>
